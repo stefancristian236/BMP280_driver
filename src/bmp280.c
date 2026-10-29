@@ -165,17 +165,17 @@ bool bmp280_is_measuring(BMP280_HandleTypedef *dev) {
 }
 
 
-static inline int32_t compensate_temperature(BMP280_HandleTypedef *dev, int32_t adc_temp, int32_t *fine_temp) {
-    int32_t var1, var2;
+static inline int32_t compensate_temperature(BMP280_HandleTypedef *dev, int32_t adc_T, int32_t *fine_temp) {
+    double var1, var2, T;
+    double t_fine;
 
-	var1 = ((((adc_temp >> 3) - ((int32_t) dev->dig_T1 << 1))) * (int32_t) dev->dig_T2) >> 11;
+    var1 = (((double) adc_T) / 16384.0 - ((double) dev -> dig_T1)/1024.0) * ((double) dev -> dig_T2);
+    var2 = ((((double)adc_T)/131072.0 - ((double) dev -> dig_T1)/8192.0) *   
+            (((double)adc_T)/131072.0 - ((double) dev -> dig_T1)/8192.0)) * ((double) dev -> dig_T3); 
 
-    var2 = (((((adc_temp >> 4) - (int32_t) dev -> dig_T1)
-            * ((adc_temp >> 4) - (int32_t) dev -> dig_T1)) >> 12)
-            * (int32_t) dev -> dig_T3) >> 14;
-    
-    *fine_temp = var1 + var2;
-    return (*fine_temp * 5 + 128) >> 8;
+    t_fine = var1 + var2;
+    T = (var1 + var2) / 5120.0;
+    return T;
 }
 
 
