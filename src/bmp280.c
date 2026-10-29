@@ -180,27 +180,25 @@ static inline int32_t compensate_temperature(BMP280_HandleTypedef *dev, int32_t 
 
 
 
-static inline uint32_t compensate_pressure(BMP280_HandleTypedef *dev, int32_t adc_press, int32_t fine_temp) {
-    int64_t var1, var2, p;
+static inline uint32_t compensate_pressure(BMP280_HandleTypedef *dev, int32_t adc_P, int32_t fine_temp) {
+    double var1, var2, p;
+    double p_fine;
 
-    var1 = (int64_t) fine_temp - 128000;
-    var2 = var1 * var1 * (int64_t) dev -> dig_P6;
-    var2 += ((var1 * (int64_t) dev -> dig_P5) << 17);
-    var2 += (((int64_t) dev -> dig_P4) << 35);
-    var1 = ((var1 * var1 * (int64_t) dev -> dig_P3) >> 8)
-            + ((var1 * (int64_t) dev -> dig_P2) << 12);
-    var1 = (((int64_t) 1 << 47) + var1) * ((int64_t) dev -> dig_P1) >> 33;
+    var1 = ((double) p_fine / 2.0 ) - 64000.0;
+    var2 = var1 * var1 * ((double) dev -> dig_P6) / 32768.0;
+    var2 += var1 * ((double) dev -> dig_P5) * 2.0;
+    var2 = (var2/4.0)+(((double) dev -> dig_P4) * 65536.0); 
+    var1 = (((double) dev -> dig_P3) * var1 * var1 / 524288.0 + ((double) dev -> dig_P2) * var1) / 524288.0;
+    var1 = (1.0 + var1 / 32768.0) * ((double) dev -> dig_P1);
+
+    if (var1 == 0.0) return 0; // avoid division by 0
+
+    p = 1048756.0 - (double) adc_P;
+    p = (p - (var2 / 4096.0)) * 6250.0 / (var1); 
+    var1 = ((double) dev -> dig_P9) * p * p / 2147483648.0;
+    var2 = p * ((double) dev -> dig_P8) / 32768.0;
+    p += (var1 + var2 + ((double) dev -> dig_P7)) / 16.0;
     
-    if (var1 == 0) {
-        return 0;
-    }
-
-    p = 1048576 - adc_press;
-    p = (((p << 31) - var2) * 3125) / var1;
-    var1 = ((int64_t) dev -> dig_P9 * (p >> 13) * (p >> 13)) >> 25;
-    var2 = ((int64_t) dev -> dig_P8 * p) >> 19;
-
-    p = ((p + var1 + var2) >> 8) + ((int64_t) dev -> dig_P7 << 4);
     return p;
 }
 
